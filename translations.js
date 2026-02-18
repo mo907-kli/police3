@@ -1,0 +1,42 @@
+export const translations = {
+  ar: {
+    header: "شرطة",
+    incidentLog: "سجل الحوادث",
+    vehicleDB: "قاعدة بيانات المركبات",
+    wantedList: "قائمة المطلوبين",
+    patrolMap: "خريطة الدوريات",
+    evidence: "الأدلة",
+    reports: "التقارير",
+    personnel: "الأفراد",
+    communications: "الاتصالات",
+    analytics: "التحليلات",
+    settings: "الإعدادات",
+    help: "المساعدة",
+    admin: "مدير",
+    officer: "ضابط",
+    individual: "فرد",
+    logout: "خروج",
+    language: "اللغة",
+    codeMode: "وضع الكود"
+  },
+  en: {
+    header: "Police Department",
+    incidentLog: "Incident Log",
+    vehicleDB: "Vehicle DB",
+    wantedList: "Wanted List",
+    patrolMap: "Patrol Map",
+    evidence: "Evidence",
+    reports: "Reports",
+    personnel: "Personnel",
+    communications: "Communications",
+    analytics: "Analytics",
+    settings: "Settings",
+    help: "Help",
+    admin: "Admin",
+    officer: "Officer",
+    individual: "Individual",
+    logout: "Logout",
+    language: "Language",
+    codeMode: "Code Mode"
+  }
+};
