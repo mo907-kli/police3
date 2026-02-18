@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة الشرطة</title>
+  <!-- Tailwind CSS (مصغر) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- خط افتراضي (اختياري) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    /* دعم الاتجاه من اليمين لليسار للعربية */
+    [dir="rtl"] .ltr\:hidden { display: none; }
+  </style>
+  <!-- خرائط الاستيراد (import maps) لجعل الحزم متاحة كـ ES modules -->
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0?bundle",
+        "react-dom": "https://esm.sh/react-dom@18.2.0?bundle",
+        "lucide-react": "https://esm.sh/lucide-react@0.263.1?bundle"
+      }
+    }
+  </script>
+  <!-- برنامج نصي نمطي لتعريف المتغيرات العامة (React, lucideReact, etc) -->
+  <script type="module">
+    import React from 'react';
+    import ReactDOM from 'react-dom';
+    import * as lucideReact from 'lucide-react';
+
+    window.React = React;
+    window.ReactDOM = ReactDOM;
+    window.lucideReact = lucideReact;
+
+    // تحديد المكونات البسيطة لـ ui (بديل عن shadcn/ui)
+    // هذا سيكون متاحاً للنص اللاحق (text/babel) عبر النطاق العام
+    window.UI = {
+      Button: ({ variant, size, className, children, ...props }) => {
+        let baseClasses = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
+        let variantClasses = variant === 'outline' ? 'border border-slate-600 bg-slate-800 hover:bg-slate-700 hover:border-slate-500 text-white' : 
+                               variant === 'ghost' ? 'hover:bg-slate-800 hover:text-white text-slate-400' : 
+                               'bg-blue-600 hover:bg-blue-700 text-white'; // default primary
+        let sizeClasses = size === 'icon' ? 'h-9 w-9 p-1' : size === 'sm' ? 'h-8 px-3 text-xs' : 'h-10 px-4 py-2';
+        return React.createElement('button', {
+          className: `${baseClasses} ${variantClasses} ${sizeClasses} ${className || ''}`,
+          ...props
+        }, children);
+      },
+      Input: (props) => {
+        return React.createElement('input', {
+          className: `flex h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${props.className || ''}`,
+          ...props
+        });
+      },
+      Label: ({ children, className, ...props }) => {
+        return React.createElement('label', {
+          className: `text-sm font-medium text-slate-300 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${className || ''}`,
+          ...props
+        }, children);
+      },
+      Card: ({ className, children, ...props }) => {
+        return React.createElement('div', {
+          className: `rounded-xl border border-slate-700 bg-slate-800/90 backdrop-blur-sm text-white shadow-lg ${className || ''}`,
+          ...props
+        }, children);
+      },
+      CardHeader: ({ className, children }) => React.createElement('div', { className: `flex flex-col space-y-1.5 p-6 ${className || ''}` }, children),
+      CardTitle: ({ className, children }) => React.createElement('h3', { className: `text-2xl font-semibold leading-none tracking-tight ${className || ''}` }, children),
+      CardDescription: ({ className, children }) => React.createElement('p', { className: `text-sm text-slate-400 ${className || ''}` }, children),
+      CardContent: ({ className, children }) => React.createElement('div', { className: `p-6 pt-0 ${className || ''}` }, children),
+      CardFooter: ({ className, children }) => React.createElement('div', { className: `flex items-center p-6 pt-0 ${className || ''}` }, children),
+    };
+
+    // تعريف أيقونات lucideReact بشكل مختصر
+    window.Icons = lucideReact;
+
+    // بيانات المستخدمين والترجمات
+    window.USERS = [
+      { username: "admin", password: "123", rank: "admin" },
+      { username: "officer", password: "123", rank: "officer" },
+      { username: "individual", password: "123", rank: "individual" }
+    ];
+
+    window.translations = {
+      ar: {
+        header: "شرطة",
+        incidentLog: "سجل الحوادث",
+        vehicleDB: "قاعدة بيانات المركبات",
+        wantedList: "قائمة المطلوبين",
+        patrolMap: "خريطة الدوريات",
+        evidence: "الأدلة",
+        reports: "التقارير",
+        personnel: "الأفراد",
+        communications: "الاتصالات",
+        analytics: "التحليلات",
+        settings: "الإعدادات",
+        help: "المساعدة",
+        admin: "مدير",
+        officer: "ضابط",
+        individual: "فرد",
+        logout: "خروج",
+        language: "اللغة",
+        codeMode: "وضع الكود"
+      },
+      en: {
+        header: "Police Department",
+        incidentLog: "Incident Log",
+        vehicleDB: "Vehicle DB",
+        wantedList: "Wanted List",
+        patrolMap: "Patrol Map",
+        evidence: "Evidence",
+        reports: "Reports",
+        personnel: "Personnel",
+        communications: "Communications",
+        analytics: "Analytics",
+        settings: "Settings",
+        help: "Help",
+        admin: "Admin",
+        officer: "Officer",
+        individual: "Individual",
+        logout: "Logout",
+        language: "Language",
+        codeMode: "Code Mode"
+      }
+    };
+
+    // تعريف Ranks و Languages (اختياري)
+    window.Ranks = { ADMIN: 'admin', OFFICER: 'officer', INDIVIDUAL: 'individual' };
+    window.Languages = { AR: 'ar', EN: 'en' };
+  </script>
+  <!-- Babel Standalone لتحويل JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-900 text-white antialiased">
+  <div id="root"></div>
+
+  <!-- نص Babel الذي يحتوي على جميع المكونات والتطبيق -->
+  <script type="text/babel">
+    (function() {
+      // استخراج المراجع من النطاق العام
+      const React = window.React;
+      const { useState } = React;
+      const Icons = window.Icons;
+      const UI = window.UI;
+      const USERS = window.USERS;
+      const translations = window.translations;
+
+      // مكون خلفية النجوم (StarfieldBackground)
+      function StarfieldBackground() {
+        return React.createElement('div', {
+          className: "fixed inset-0 pointer-events-none z-[-1]"
+        }, React.createElement('div', {
+          className: "w-full h-full",
+          style: {
+            backgroundImage: 'radial-gradient(white 1px, transparent 1px)',
+            backgroundSize: '20px 20px',
+            opacity: '0.03'
+          }
+        }));
+      }
+
+      // مكون Header
+      function Header({ user, lang, t, onLogout }) {
+        const getRankColor = (rank) => {
+          switch (rank) {
+            case "admin": return "bg-red-600";
+            case "officer": return "bg-blue-600";
+            case "individual": return "bg-green-600";
+            default: return "bg-slate-600";
+          }
+        };
+
+        const getRankLabel = (rank) => t[rank] || rank;
+
+        return React.createElement('header', {
+          className: "fixed top-0 left-0 right-0 h-16 bg-slate-900 border-b border-slate-700 flex items-center justify-between px-4 z-50"
+        }, 
+        // Left Section
+        React.createElement('div', { className: "flex items-center gap-3" },
+          React.createElement('div', { className: "flex items-center gap-1 px-2 py-1 bg-slate-800 rounded text-xs text-white" },
+            React.createElement('span', { className: "font-bold" }, "mo"),
+            React.createElement('div', { className: "w-4 h-4 bg-blue-500 rounded flex items-center justify-center text-[10px] font-bold" }, "A")
+          ),
+          React.createElement('div', { className: "relative" },
+            React.createElement(UI.Button, { variant: "ghost", size: "icon", className: "text-slate-400 hover:text-white" },
+              React.createElement(Icons.Bell, { className: "w-5 h-5" })
+            ),
+            React.createElement('span', { className: "absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" })
+          ),
+          React.createElement(UI.Button, { variant: "ghost", size: "sm", className: "text-slate-300 hover:text-white text-xs" },
+            lang === 'ar' ? 'English' : 'English'
+          ),
+          React.createElement(UI.Button, { variant: "ghost", size: "icon", className: "text-slate-400 hover:text-white bg-red-900/50 hover:bg-red-900" },
+            React.createElement(Icons.Code, { className: "w-4 h-4" })
+          )
+        ),
+        // Center Section
+        React.createElement('div', { className: "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" },
+          React.createElement('h1', { className: "text-white font-semibold text-lg tracking-wide" }, t.header)
+        ),
+        // Right Section
+        React.createElement('div', { className: "flex items-center gap-3" },
+          React.createElement(UI.Button, { variant: "ghost", size: "icon", className: "text-slate-400 hover:text-white" },
+            React.createElement(Icons.Home, { className: "w-5 h-5" })
+          ),
+          user && React.createElement('div', { className: "flex items-center gap-3 pl-3 border-l border-slate-700" },
+            React.createElement('div', { className: "flex flex-col items-end" },
+              React.createElement('span', { className: "text-white text-sm font-medium" }, user.username),
+              React.createElement('span', { className: `text-[10px] px-1.5 py-0.5 rounded text-white ${getRankColor(user.rank)}` }, getRankLabel(user.rank))
+            ),
+            React.createElement(UI.Button, { variant: "ghost", size: "icon", onClick: onLogout, className: "text-slate-400 hover:text-red-400" },
+              React.createElement(Icons.LogOut, { className: "w-4 h-4" })
+            )
+          )
+        ));
+      }
+
+      // مكون ButtonGrid
+      function ButtonGrid({ t }) {
+        const buttons = [
+          { id: 1, icon: Icons.FileText, labelKey: "incidentLog" },
+          { id: 2, icon: Icons.Car, labelKey: "vehicleDB" },
+          { id: 3, icon: Icons.AlertTriangle, labelKey: "wantedList" },
+          { id: 4, icon: Icons.Map, labelKey: "patrolMap" },
+          { id: 5, icon: Icons.Archive, labelKey: "evidence" },
+          { id: 6, icon: Icons.ClipboardList, labelKey: "reports" },
+          { id: 7, icon: Icons.Users, labelKey: "personnel" },
+          { id: 8, icon: Icons.Radio, labelKey: "communications" },
+          { id: 9, icon: Icons.BarChart3, labelKey: "analytics" },
+          { id: 10, icon: Icons.Settings, labelKey: "settings" },
+          { id: 11, icon: Icons.HelpCircle, labelKey: "help" },
+        ];
+
+        return React.createElement('div', { className: "pt-20 px-6 pb-6" },
+          React.createElement('div', { className: "grid grid-cols-3 gap-4 mb-4" },
+            buttons.slice(0, 9).map((btn) => {
+              const Icon = btn.icon;
+              return React.createElement(UI.Button, {
+                key: btn.id,
+                variant: "outline",
+                className: "h-16 bg-slate-800 border-slate-600 text-white hover:bg-slate-700 hover:border-slate-500 flex flex-col items-center justify-center gap-1"
+              },
+                React.createElement(Icon, { className: "w-5 h-5" }),
+                React.createElement('span', { className: "text-xs font-medium" }, t[btn.labelKey])
+              );
+            })
+          ),
+          React.createElement('div', { className: "flex gap-4" },
+            buttons.slice(9).map((btn) => {
+              const Icon = btn.icon;
+              return React.createElement(UI.Button, {
+                key: btn.id,
+                variant: "outline",
+                className: "h-16 bg-slate-800 border-slate-600 text-white hover:bg-slate-700 hover:border-slate-500 flex flex-col items-center justify-center gap-1"
+              },
+                React.createElement(Icon, { className: "w-5 h-5" }),
+                React.createElement('span', { className: "text-xs font-medium" }, t[btn.labelKey])
+              );
+            })
+          )
+        );
+      }
+
+      // مكون Login
+      function Login({ onLogin, lang, t }) {
+        const [username, setUsername] = React.useState("");
+        const [password, setPassword] = React.useState("");
+        const [isLoading, setIsLoading] = React.useState(false);
+        const [error, setError] = React.useState("");
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          setError("");
+          setIsLoading(true);
+
+          setTimeout(() => {
+            const foundUser = USERS.find(
+              (u) => u.username === username && u.password === password
+            );
+
+            if (foundUser) {
+              onLogin(foundUser.username, foundUser.rank);
+            } else {
+              setError(lang === 'ar' ? 'اسم المستخدم أو كلمة المرور غير صحيحة' : 'Invalid username or password');
+            }
+            setIsLoading(false);
+          }, 800);
+        };
+
+        return React.createElement('div', { className: "min-h-screen flex items-center justify-center bg-slate-900 relative overflow-hidden" },
+          React.createElement('div', { className: "absolute inset-0 opacity-30" },
+            React.createElement('div', {
+              className: "w-full h-full",
+              style: {
+                backgroundImage: 'radial-gradient(white 1px, transparent 1px)',
+                backgroundSize: '20px 20px'
+              }
+            })
+          ),
+          React.createElement(UI.Card, { className: "w-full max-w-md relative z-10" },
+            React.createElement(UI.CardHeader, { className: "space-y-1 text-center" },
+              React.createElement('div', { className: "flex justify-center mb-4" },
+                React.createElement('div', { className: "w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-lg shadow-blue-500/20" },
+                  React.createElement(Icons.Shield, { className: "w-8 h-8 text-white" })
+                )
+              ),
+              React.createElement(UI.CardTitle, { className: "text-2xl font-bold text-white" }, t.header),
+              React.createElement(UI.CardDescription, { className: "text-slate-400" },
+                lang === 'ar' ? 'سجل الدخول للوصول إلى لوحة التحكم' : 'Sign in to access the dashboard'
+              )
+            ),
+            React.createElement('form', { onSubmit: handleSubmit },
+              React.createElement(UI.CardContent, { className: "space-y-4" },
+                React.createElement('div', { className: "space-y-2" },
+                  React.createElement(UI.Label, { htmlFor: "username", className: "text-slate-300" },
+                    lang === 'ar' ? 'اسم المستخدم' : 'Username'
+                  ),
+                  React.createElement('div', { className: "relative" },
+                    React.createElement(Icons.User, { className: "absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" }),
+                    React.createElement(UI.Input, {
+                      id: "username",
+                      type: "text",
+                      placeholder: lang === 'ar' ? 'أدخل اسم المستخدم' : 'Enter username',
+                      value: username,
+                      onChange: (e) => setUsername(e.target.value),
+                      className: "pr-10",
+                      required: true
+                    })
+                  )
+                ),
+                React.createElement('div', { className: "space-y-2" },
+                  React.createElement(UI.Label, { htmlFor: "password", className: "text-slate-300" },
+                    lang === 'ar' ? 'كلمة المرور' : 'Password'
+                  ),
+                  React.createElement('div', { className: "relative" },
+                    React.createElement(Icons.Lock, { className: "absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" }),
+                    React.createElement(UI.Input, {
+                      id: "password",
+                      type: "password",
+                      placeholder: lang === 'ar' ? 'أدخل كلمة المرور' : 'Enter password',
+                      value: password,
+                      onChange: (e) => setPassword(e.target.value),
+                      className: "pr-10",
+                      required: true
+                    })
+                  )
+                ),
+                error && React.createElement('div', { className: "flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm" },
+                  React.createElement(Icons.AlertCircle, { className: "w-4 h-4 flex-shrink-0" }),
+                  React.createElement('span', null, error)
+                )
+              ),
+              React.createElement(UI.CardFooter, null,
+                React.createElement(UI.Button, {
+                  type: "submit",
+                  className: "w-full",
+                  disabled: isLoading
+                },
+                  isLoading ? 
+                    React.createElement('span', { className: "flex items-center gap-2" },
+                      React.createElement('div', { className: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" }),
+                      lang === 'ar' ? 'جاري التحقق...' : 'Verifying...'
+                    ) :
+                    React.createElement('span', { className: "flex items-center gap-2" },
+                      React.createElement(Icons.Shield, { className: "w-4 h-4" }),
+                      lang === 'ar' ? 'تسجيل الدخول' : 'Sign In'
+                    )
+                )
+              )
+            )
+          )
+        );
+      }
+
+      // مكون App الرئيسي
+      function App() {
+        const [user, setUser] = React.useState(null);
+        const [lang, setLang] = React.useState('ar');
+
+        const handleLogin = (username, rank) => {
+          setUser({ username, rank });
+        };
+
+        const handleLogout = () => {
+          setUser(null);
+        };
+
+        const t = translations[lang];
+
+        if (!user) {
+          return React.createElement(React.Fragment, null,
+            React.createElement(StarfieldBackground, null),
+            React.createElement(Login, { onLogin: handleLogin, lang: lang, t: t })
+          );
+        }
+
+        return React.createElement('div', { className: "min-h-screen bg-slate-900 text-white" },
+          React.createElement(StarfieldBackground, null),
+          React.createElement(Header, { user: user, lang: lang, t: t, onLogout: handleLogout }),
+          React.createElement(ButtonGrid, { t: t })
+        );
+      }
+
+      // Render التطبيق
+      ReactDOM.render(React.createElement(App, null), document.getElementById('root'));
+    })();
+  </script>
+</body>
+</html>
